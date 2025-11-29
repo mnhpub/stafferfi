@@ -6,4 +6,4 @@
 
 - Vitest uses jsdom and RTL.
 - Storybook runs with Vite builder and uses Tailwind styles from `app/globals.css`.
-- Cypress configured with baseUrl `http://localhost:3000`.
+- Cypress configured with baseUrl `http://localhost:3000`..
