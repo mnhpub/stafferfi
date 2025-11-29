@@ -1,53 +1,57 @@
-# Multi-stage build for Next.js 15 app on Fly.io
+# Multi-stage build for monorepo (Next.js web, Node API, Python lake) on Fly.io
 
-# 1) Install dependencies
+# 1) Install Node dependencies
 FROM node:20-alpine AS deps
 WORKDIR /app
-# Install OS deps needed for sharp / next image optimizations
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat python3 py3-pip
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* ./
-# Use corepack to enable pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
 RUN pnpm install --frozen-lockfile
 
-# 2) Build the app
+# 2) Build Node apps (web + api)
 FROM node:20-alpine AS builder
 WORKDIR /app
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat python3 py3-pip
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
-# Ensure Next.js outputs the standalone server
 RUN corepack enable && corepack prepare pnpm@latest --activate && pnpm install --frozen-lockfile
 RUN pnpm build
 # Ensure public directory exists in builder stage
 RUN mkdir -p apps/web/public
 
-# 3) Run the app with minimal runtime image
-FROM node:20-alpine AS runner
+# 3) Install Python dependencies for lake app
+FROM python:3.10-slim AS lake-deps
 WORKDIR /app
+COPY apps/lake/requirements.txt ./requirements.txt
+RUN python -m venv /opt/venv \
+  && . /opt/venv/bin/activate \
+  && pip install --no-cache-dir -Ur requirements.txt
+
+# 4) Final runtime image with supervisord managing all apps
+FROM python:3.10-slim AS runner
+WORKDIR /app
+
+# Install Node runtime and pnpm for Node apps
+RUN apt-get update && apt-get install -y --no-install-recommends nodejs npm ca-certificates && rm -rf /var/lib/apt/lists/* \
+  && npm install -g corepack && corepack enable
+
+# Copy Node build artifacts
+COPY --from=builder /app ./
+
+# Copy Python venv and lake app source
+COPY --from=lake-deps /opt/venv /opt/venv
+COPY apps/lake ./apps/lake
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install supervisord
+RUN pip install --no-cache-dir supervisor
+COPY supervisord.conf /etc/supervisord.conf
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-# Fly will route to this port
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
+EXPOSE 3000 4000 8000
 
-# Copy the standalone build produced by Next.js
-# The standalone directory contains node_modules and server.js inside .next/standalone
-COPY --from=builder /app/apps/web/.next/standalone ./
-# Static assets
-COPY --from=builder /app/apps/web/.next/static ./.next/static
-# Public folder (only copy if exists). If not present, create empty dir to avoid COPY failure.
-# Use a conditional copy pattern via wildcard; if no match, create directory.
-# (Alpine shell step to guarantee existence)
-RUN mkdir -p public
-COPY --from=builder /app/apps/web/public ./public
-
-# Make sure the app runs as non-root
-USER 1001
-
-EXPOSE 3000
-# Next.js standalone build has a server.js inside the workspace structure
-CMD ["node", "apps/web/server.js"]
+CMD ["supervisord", "-c", "/etc/supervisord.conf"]

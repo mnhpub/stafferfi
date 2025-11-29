@@ -1,0 +1,16 @@
+meta {
+  name: admin/corrections
+  type: http
+  seq: 3
+}
+
+get {
+  url: https://ecfr.gov/api/admin/v1/agencies.json
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
