@@ -1,0 +1,36 @@
+# Reduce Docker build context for Next.js app
+
+# Dependencies installed inside container
+node_modules
+
+# Local build outputs (rebuilt in container)
+.next
+
+# VCS metadata
+.git
+.gitignore
+
+# Tests & tooling not needed in runtime image
+__tests__
+cypress
+.storybook
+.docs
+
+# Documentation
+docs
+
+# Editor / workspace files
+.vscode
+
+# Logs & debug artifacts
+*.log
+pnpm-debug.log*
+
+# Environment files (provide via Fly secrets instead)
+.env*
+
+# Cache directories
+.cache
+
+# Misc
+Dockerfile.old

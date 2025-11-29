@@ -20,6 +20,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # Ensure Next.js outputs the standalone server
 RUN corepack enable && corepack prepare pnpm@latest --activate
 RUN pnpm build
+RUN mkdir -p public # Ensure public directory exists in builder stage
 
 # 3) Run the app with minimal runtime image
 FROM node:20-alpine AS runner
@@ -32,9 +33,15 @@ ENV PORT=3000
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 
-# Copy the standalone build
+# Copy the standalone build produced by Next.js
+# The standalone directory contains node_modules and server.js inside .next/standalone
 COPY --from=builder /app/.next/standalone ./
+# Static assets
 COPY --from=builder /app/.next/static ./.next/static
+# Public folder (only copy if exists). If not present, create empty dir to avoid COPY failure.
+# Use a conditional copy pattern via wildcard; if no match, create directory.
+# (Alpine shell step to guarantee existence)
+RUN mkdir -p public
 COPY --from=builder /app/public ./public
 
 # Make sure the app runs as non-root
