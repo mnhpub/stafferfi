@@ -1,0 +1,11 @@
+{
+  "name": "@stafferfi/tailwind-config",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "tailwind.config.ts",
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.7",
+    "tailwindcss": "^3.4.14"
+  }
+}

@@ -1,0 +1,10 @@
+packages:
+  - apps/*
+  - packages/*
+
+ignoredBuiltDependencies:
+  - cypress
+  - duckdb
+  - esbuild
+  - sharp
+  - unrs-resolver
