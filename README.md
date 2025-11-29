@@ -1,6 +1,25 @@
 # StafferFi
 
-`docker build -t stafferfi . && docker run -p 3000:3000 stafferfi`
+## Local Development
+
+Run the local development environment with Docker:
+
+```bash
+./local-dev.sh
+```
+
+This script will:
+1. Build the Docker image
+2. Start the container using docker compose
+3. Expose the app on http://localhost:3000
+
+### Manual Docker Commands
+
+Alternatively, you can run Docker commands manually:
+
+```bash
+docker build -t stafferfi . && docker run -p 3000:3000 stafferfi
+```
 
 ## Notes
 

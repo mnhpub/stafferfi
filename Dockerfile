@@ -29,6 +29,7 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 # Fly will route to this port
 ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
@@ -48,5 +49,5 @@ COPY --from=builder /app/apps/web/public ./public
 USER 1001
 
 EXPOSE 3000
-# Next.js standalone build has a server.js at project root in the standalone output
-CMD ["node", "server.js"]
+# Next.js standalone build has a server.js inside the workspace structure
+CMD ["node", "apps/web/server.js"]
