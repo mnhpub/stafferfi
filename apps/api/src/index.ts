@@ -1,10 +1,11 @@
 import express, { type Request, type Response } from 'express';
-import { Database } from 'duckdb';
+import duckdb from 'duckdb';
 
 const app = express();
-const port = process.env.PORT ?? 4000;
+const port = Number(process.env.API_PORT ?? 4000);
 
 // Initialize DuckDB in-process database
+const { Database } = duckdb;
 const db = new Database(':memory:');
 
 app.get('/health', (_req: Request, res: Response) => {

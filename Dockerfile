@@ -19,6 +19,15 @@ RUN pnpm build:web && pnpm build:api
 # Ensure public directory exists in builder stage
 RUN mkdir -p apps/web/public
 
+# Prepare a standalone API bundle using npm (for runtime)
+WORKDIR /app/apps/api
+RUN cp package.json /tmp/api-package.json
+WORKDIR /tmp/api
+RUN cp /tmp/api-package.json ./package.json \
+  && npm install --only=production --legacy-peer-deps
+RUN mkdir -p dist && cp -r /app/apps/api/dist/* dist/
+WORKDIR /app
+
 # 3) Install Python dependencies for lake app
 FROM python:3.10-slim AS lake-deps
 WORKDIR /app
@@ -41,10 +50,11 @@ COPY --from=builder /app/apps/web/.next/standalone ./
 COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder /app/apps/web/public ./apps/web/public
 
-# Copy API build
-COPY --from=builder /app/apps/api/dist ./apps/api/dist
-COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
-COPY --from=builder /app/apps/api/node_modules ./apps/api/node_modules
+# Copy self-contained API bundle from builder (dist + node_modules + package.json)
+COPY --from=builder /tmp/api ./apps/api
+
+# Go back to root workdir for supervisord
+WORKDIR /app
 
 # Copy Python venv and lake app source
 COPY --from=lake-deps /opt/venv /opt/venv
@@ -59,6 +69,7 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+ENV API_PORT=4000
 
 EXPOSE 3000 4000 8000
 
