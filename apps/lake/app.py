@@ -12,7 +12,7 @@ def names():
         data = json.load(f)
     return jsonify(data), 200
 
-@app.route('/fizz', methods=['GET'])
+@app.route('/corrections', methods=['GET'])
 def fizz():
     obj = 'json/usds/ecfr/corrections.json'
     if not os.path.exists(obj):
