@@ -14,7 +14,7 @@ services:
       test: ["CMD-SHELL", "pg_isready -U stafferfi -d ecfr_analytics"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 20   # make sure Postgres has enough time
     networks:
       - stafferfi
 
