@@ -73,7 +73,7 @@ export default function HomePage() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">eCFR Analytics Dashboard</h1>
+        <h1 className="text-3xl font-bold text-gray-900">StafferFi Dashboard</h1>
         <p className="mt-2 text-gray-600">
           Tracking regulatory corrections and volatility across federal agencies
         </p>

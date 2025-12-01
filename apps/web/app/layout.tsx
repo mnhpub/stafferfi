@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 
 export const metadata: Metadata = {
-  title: 'eCFR Analytics - StafferFi',
+  title: 'StafferFi',
   description: 'Electronic Code of Federal Regulations analytics and regulatory volatility tracking'
 };
 
