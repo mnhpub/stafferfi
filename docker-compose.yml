@@ -1,10 +1,85 @@
-version: '3.8'
-
 services:
+  # PostgreSQL database (non-persistent for MVP)
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=ecfr_analytics
+      - POSTGRES_USER=stafferfi
+      - POSTGRES_PASSWORD=stafferfi_dev
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stafferfi -d ecfr_analytics"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - stafferfi
+
+  # Data loader - runs ETL once then exits
+  etl:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    environment:
+      - DATABASE_URL=postgresql://stafferfi:stafferfi_dev@postgres:5432/ecfr_analytics
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: python apps/lake/etl_to_postgres.py
+    networks:
+      - stafferfi
+    restart: "no"
+
+  # Node API server
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - API_PORT=4000
+      - DATABASE_URL=postgresql://stafferfi:stafferfi_dev@postgres:5432/ecfr_analytics
+    depends_on:
+      postgres:
+        condition: service_healthy
+      etl:
+        condition: service_completed_successfully
+    command: node apps/api/dist/index.js
+    networks:
+      - stafferfi
+    restart: unless-stopped
+
+  # Next.js web frontend
   web:
-    image: stafferfi
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
       - NEXT_TELEMETRY_DISABLED=1
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      # Use internal Docker network for API calls from server-side
+      - API_URL=http://api:4000
+      # Use Gitpod URL for client-side API calls
+      - NEXT_PUBLIC_API_URL=${GITPOD_WORKSPACE_URL:-http://localhost:4000}
+    depends_on:
+      - api
+    command: node apps/web/server.js
+    networks:
+      - stafferfi
+    restart: unless-stopped
+
+networks:
+  stafferfi:
+    driver: bridge
