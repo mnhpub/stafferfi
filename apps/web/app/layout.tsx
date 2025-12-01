@@ -14,7 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <nav className="bg-white shadow-sm border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16">
-              <div className="flex">
+                <div className="flex items-center">
                 <Link href="/" className="flex items-center px-2 text-xl font-bold text-blue-600">
                   eCFR Analytics
                 </Link>

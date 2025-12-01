@@ -56,7 +56,7 @@ const getRankBadge = (rank: number, total: number) => {
 export default function ScorecardPage() {
   const [agencies, setAgencies] = useState<AgencyScorecard[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<'composite' | 'corrections' | 'rvi' | 'responsiveness'>('composite');
+  const [sortState, setSortState] = useState<{ key: string; dir: 'asc' | 'desc' }>({ key: 'composite', dir: 'desc' });
 
   const API_URL = getApiUrl();
 
@@ -82,15 +82,28 @@ export default function ScorecardPage() {
   }
 
   const sortedAgencies = [...agencies].sort((a, b) => {
-    switch (sortBy) {
+    const { key, dir } = sortState;
+    const multiplier = dir === 'asc' ? 1 : -1;
+
+    const cmp = (x: number | string, y: number | string) => {
+      if (typeof x === 'number' && typeof y === 'number') return (x - y) * multiplier;
+      return String(x).localeCompare(String(y)) * multiplier;
+    };
+
+    switch (key) {
       case 'corrections':
-        return a.corrections_rank - b.corrections_rank;
+        return cmp(a.corrections_rank, b.corrections_rank);
       case 'rvi':
-        return a.rvi_rank - b.rvi_rank;
+        return cmp(a.rvi_rank, b.rvi_rank);
       case 'responsiveness':
-        return a.responsiveness_rank - b.responsiveness_rank;
+        return cmp(a.responsiveness_rank, b.responsiveness_rank);
+      case 'size':
+        return cmp(a.size_rank, b.size_rank);
+      case 'agency':
+        return cmp(a.name, b.name);
+      case 'composite':
       default:
-        return parseFloat(b.composite_score) - parseFloat(a.composite_score);
+        return cmp(parseFloat(a.composite_score), parseFloat(b.composite_score));
     }
   });
 
@@ -144,53 +157,12 @@ export default function ScorecardPage() {
         </div>
       </div>
 
-      {/* Sort Controls */}
+      {/* Sort Controls (kept for backward compatibility, but headers are clickable) */}
       <div className="bg-white shadow rounded-lg p-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Sort By
+          Sort: <span className="font-semibold">{sortState.key}</span> ({sortState.dir})
         </label>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setSortBy('composite')}
-            className={`px-4 py-2 rounded-md text-sm font-medium ${
-              sortBy === 'composite'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Composite Score
-          </button>
-          <button
-            onClick={() => setSortBy('corrections')}
-            className={`px-4 py-2 rounded-md text-sm font-medium ${
-              sortBy === 'corrections'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Correction Activity
-          </button>
-          <button
-            onClick={() => setSortBy('rvi')}
-            className={`px-4 py-2 rounded-md text-sm font-medium ${
-              sortBy === 'rvi'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Volatility (RVI)
-          </button>
-          <button
-            onClick={() => setSortBy('responsiveness')}
-            className={`px-4 py-2 rounded-md text-sm font-medium ${
-              sortBy === 'responsiveness'
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Responsiveness
-          </button>
-        </div>
+        <div className="text-sm text-gray-600">You can also click column headers to change sort and toggle direction.</div>
       </div>
 
       {/* Scorecard Table */}
@@ -200,28 +172,140 @@ export default function ScorecardPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Rank
+                  <button
+                    onClick={() => setSortState(s => ({ key: 'composite', dir: s.key === 'composite' && s.dir === 'desc' ? 'asc' : 'desc' }))}
+                    className="inline-flex items-center gap-2"
+                  >
+                    Rank
+                    {sortState.key === 'composite' && (
+                      sortState.dir === 'desc' ? (
+                        <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                          <path d="M5 8l5 5 5-5H5z" />
+                        </svg>
+                      ) : (
+                        <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                          <path d="M5 12l5-5 5 5H5z" />
+                        </svg>
+                      )
+                    )}
+                  </button>
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Agency
+                  <button
+                    onClick={() => setSortState(s => ({ key: 'agency', dir: s.key === 'agency' && s.dir === 'desc' ? 'asc' : 'desc' }))}
+                    className="inline-flex items-center gap-2"
+                  >
+                    Agency
+                    {sortState.key === 'agency' && (
+                      sortState.dir === 'desc' ? (
+                        <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                          <path d="M5 8l5 5 5-5H5z" />
+                        </svg>
+                      ) : (
+                        <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                          <path d="M5 12l5-5 5 5H5z" />
+                        </svg>
+                      )
+                    )}
+                  </button>
                 </th>
                 <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Grade
                 </th>
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Score
+                  <button
+                    onClick={() => setSortState(s => ({ key: 'composite', dir: s.key === 'composite' && s.dir === 'desc' ? 'asc' : 'desc' }))}
+                    className="inline-flex items-center gap-2"
+                  >
+                    Score
+                    {sortState.key === 'composite' && (
+                      sortState.dir === 'desc' ? (
+                        <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                          <path d="M5 8l5 5 5-5H5z" />
+                        </svg>
+                      ) : (
+                        <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                          <path d="M5 12l5-5 5 5H5z" />
+                        </svg>
+                      )
+                    )}
+                  </button>
                 </th>
                 <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Activity
+                  <button
+                    onClick={() => setSortState(s => ({ key: 'corrections', dir: s.key === 'corrections' && s.dir === 'desc' ? 'asc' : 'desc' }))}
+                    className="inline-flex items-center gap-2"
+                  >
+                    Activity
+                    {sortState.key === 'corrections' && (
+                      sortState.dir === 'desc' ? (
+                        <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                          <path d="M5 8l5 5 5-5H5z" />
+                        </svg>
+                      ) : (
+                        <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                          <path d="M5 12l5-5 5 5H5z" />
+                        </svg>
+                      )
+                    )}
+                  </button>
                 </th>
                 <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Volatility
+                  <button
+                    onClick={() => setSortState(s => ({ key: 'rvi', dir: s.key === 'rvi' && s.dir === 'desc' ? 'asc' : 'desc' }))}
+                    className="inline-flex items-center gap-2"
+                  >
+                    Volatility
+                    {sortState.key === 'rvi' && (
+                      sortState.dir === 'desc' ? (
+                        <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                          <path d="M5 8l5 5 5-5H5z" />
+                        </svg>
+                      ) : (
+                        <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                          <path d="M5 12l5-5 5 5H5z" />
+                        </svg>
+                      )
+                    )}
+                  </button>
                 </th>
                 <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Size
+                  <button
+                    onClick={() => setSortState(s => ({ key: 'size', dir: s.key === 'size' && s.dir === 'desc' ? 'asc' : 'desc' }))}
+                    className="inline-flex items-center gap-2"
+                  >
+                    Size
+                    {sortState.key === 'size' && (
+                      sortState.dir === 'desc' ? (
+                        <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                          <path d="M5 8l5 5 5-5H5z" />
+                        </svg>
+                      ) : (
+                        <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                          <path d="M5 12l5-5 5 5H5z" />
+                        </svg>
+                      )
+                    )}
+                  </button>
                 </th>
                 <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Response
+                  <button
+                    onClick={() => setSortState(s => ({ key: 'responsiveness', dir: s.key === 'responsiveness' && s.dir === 'desc' ? 'asc' : 'desc' }))}
+                    className="inline-flex items-center gap-2"
+                  >
+                    Response
+                    {sortState.key === 'responsiveness' && (
+                      sortState.dir === 'desc' ? (
+                        <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                          <path d="M5 8l5 5 5-5H5z" />
+                        </svg>
+                      ) : (
+                        <svg className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                          <path d="M5 12l5-5 5 5H5z" />
+                        </svg>
+                      )
+                    )}
+                  </button>
                 </th>
                 <th scope="col" className="relative px-6 py-3">
                   <span className="sr-only">View</span>
