@@ -1,5 +1,7 @@
 # Architecture Decision Records (ADRs)
 
+[Back to Main README.md](../../README.md)
+
 This document captures key architecture and design decisions for the StafferFi project.
 
 ---

@@ -1,5 +1,7 @@
 # StafferFi Discovery Session
 
+[Back to Main README.md](../../README.md)
+
 - An enterprise‑scale application that polls the [Federal Register](https://www.ecfr.gov/) via the public eCFR API (`OpenAPI 3.0.4`).
 - Users select points in time to compare historical versions through a modern UI.
 - The application supports widgets, with the default set to the scorecard widget.

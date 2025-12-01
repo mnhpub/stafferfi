@@ -1,24 +1,28 @@
-# StafferFi
+# StafferFi 🦕
 
-StafferFi is a multi-tier polyglot ETL service collection represented by the following services:
+StafferFi is a multi-tier polyglot ETL service collection represented by the following services.
 
+:::note
 - **Web UI** – Next.js 15 (TypeScript, Tailwind, etc.) under `apps/web`
 - **API** – Express + DuckDB under `apps/api`
 - **Lake** – Python (FastAPI/Flask-style app) served by Gunicorn under `apps/lake`
-
-The project uses **pnpm** workspaces in development and a single **Docker image** with `supervisord` to run all three services in production-like environments.
+:::
 
 ## Documentation
 
-[Discovery](./docs/discovery/DISCOVERY.md)
-[Planning](./docs/)
-[ADRs](./docs/)
+- [Discovery](./docs/discovery/README.md)
+- [Planning](./docs/planning/README.md)
+- [ADRs](./docs/adrs/README.md)
+
+:::info
+This project uses **pnpm** workspaces in a single **Docker image** with `supervisord` running all services in prd-like environment.
+:::
 
 ## Demo Quick Start (local docker)
 
-You can also run everything from the all‑in‑one image directly, if you prefer to manage Postgres yourself.
+- [Start here for demo documentation](./docs/demo/README.md)
 
-### 1. Demo Build
+### 1. Demo Build Launch 🚀
 
 ```bash
 brew install --cask docker

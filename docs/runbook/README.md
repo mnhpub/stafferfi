@@ -1,8 +1,10 @@
-## Operations Runbook (local docker)
+## Operations Runbook
 
-#### ⚠ Important Notice
+#### Docker
 
+:::info
 This runbook is in active development. Contributions are welcome.
+:::
 
 ### Docker Compose
 
