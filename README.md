@@ -10,9 +10,66 @@ The project uses **pnpm** workspaces in development and a single **Docker image*
 
 ---
 
-## Quick start (Docker all-in-one image)
+## Getting started (Docker + Docker Compose)
 
-Build the image from the repo root:
+The easiest way to run the full stack locally is via Docker Compose. This will:
+
+- Start a Postgres container.
+- Run the DuckDB → Postgres pipeline (ingestion + ETL) once.
+- Start the API and web UI, wired to that Postgres.
+
+From the repo root:
+
+```bash
+cd /home/mikehacker/src/usds/stafferfi
+
+# Build and run all services
+sudo docker compose up --build
+```
+
+Then open:
+
+- Web UI:  http://localhost:3000  
+- API:     http://localhost:4000  
+- Lake:    http://localhost:8000  
+
+To stop everything:
+
+```bash
+sudo docker compose down
+```
+
+### What Compose is doing
+
+`docker-compose.yml` defines:
+
+- `postgres` – Postgres 16 (non-persistent for MVP):
+  - `POSTGRES_DB=ecfr_analytics`
+  - `POSTGRES_USER=stafferfi`
+  - `POSTGRES_PASSWORD=stafferfi_dev`
+- `etl` – one-shot data loader:
+  - Waits for `postgres` to be healthy, then runs:
+    ```bash
+    /opt/venv/bin/python apps/lake/ingestion.py \
+      && /opt/venv/bin/python apps/lake/etl_to_postgres.py
+    ```
+  - Uses `DATABASE_URL=postgresql://stafferfi:stafferfi_dev@postgres:5432/ecfr_analytics`.
+- `api` – Node/Express API:
+  - Depends on healthy `postgres` and successful `etl`.
+  - Exposed on `http://localhost:4000`.
+- `web` – Next.js frontend:
+  - Depends on `api`.
+  - Exposed on `http://localhost:3000`.
+
+All of these use the same `Dockerfile` (`target: runner`) and are built from the monorepo.
+
+---
+
+## Quick start (single all-in-one container)
+
+You can also run everything from the all‑in‑one image directly, if you prefer to manage Postgres yourself.
+
+### 1. Build the image
 
 ```bash
 cd /home/mikehacker/src/usds/stafferfi
@@ -21,168 +78,81 @@ cd /home/mikehacker/src/usds/stafferfi
 sudo docker build -t stafferfi-all .
 ```
 
-Run the container:
+### 2. Start Postgres in Docker
+
+```bash
+sudo docker network create stafferfi-net || true
+
+sudo docker rm -f stafferfi-postgres || true
+sudo docker run -d \
+  --name stafferfi-postgres \
+  --network stafferfi-net \
+  -e POSTGRES_USER=stafferfi \
+  -e POSTGRES_PASSWORD=stafferfi_dev \
+  -e POSTGRES_DB=ecfr_analytics \
+  -p 5432:5432 \
+  postgres:16-alpine
+```
+
+### 3. Run the all‑in‑one app container
 
 ```bash
 sudo docker run --rm \
-  -p 3000:3000 \
-  -p 4000:4000 \
-  -p 8000:8000 \
+  --name stafferfi-all \
+  --network stafferfi-net \
+  -p 3000:3000 -p 4000:4000 -p 8000:8000 \
+  -e DATABASE_URL='postgresql://stafferfi:stafferfi_dev@stafferfi-postgres:5432/ecfr_analytics' \
   stafferfi-all
 ```
 
-You should see logs similar to:
+Inside `stafferfi-all`, `supervisord` will:
 
-- `Web UI:     http://localhost:3000`
-- `API:        http://localhost:4000`
-- `Lake (Py):  http://localhost:8000`
-
-### Services and ports
-
-Inside the container:
-
-- **Web (Next.js)**  
-  - Command: `node apps/web/server.js` (Next.js standalone server)  
-  - Port: `3000` (controlled by `PORT` env var)  
-  - Exposed on host: `http://localhost:3000`
-
-- **API (Express + DuckDB)**  
-  - Command: `node apps/api/dist/index.js`  
-  - Port: `4000` (controlled by `API_PORT` env var, defaults to 4000)  
-  - Exposed on host: `http://localhost:4000`  
-  - Example endpoints:
-    - `GET /health`
-    - `GET /duckdb/version`
-
-- **Lake (Python / Gunicorn)**  
-  - Command: `gunicorn app:app --bind 0.0.0.0:8000 --chdir /app/apps/lake`  
-  - Port: `8000`  
-  - Exposed on host: `http://localhost:8000`
-
-`supervisord` manages all three processes inside the container, using `supervisord.conf` at `/etc/supervisord.conf`.
+- Run `lake_pipeline` (DuckDB ingestion + ETL to Postgres).
+- Start:
+  - Next.js web on port 3000.
+  - Node API on port 4000.
+  - Gunicorn lake app on port 8000.
 
 ---
 
-## Local development
+## Operations runbook (local Docker)
 
-### Prerequisites
-
-- Node.js 20+
-- pnpm (managed via corepack or installed globally)
-- Python 3.10+ (for the lake app, if run locally)
-
-### Install dependencies
+### Check running containers
 
 ```bash
-cd /home/mikehacker/src/usds/stafferfi
-corepack enable
-corepack prepare pnpm@latest --activate
-
-pnpm install
+sudo docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
 ```
 
-### Build
+### View logs (Compose)
 
 ```bash
-pnpm build:web
-pnpm build:api
+sudo docker compose logs -f
 ```
 
-(These are the same build steps the Docker `builder` stage runs.)
-
-### Run apps locally (example)
-
-Web:
+### View logs (single container)
 
 ```bash
-cd apps/web
-pnpm dev   # or pnpm start after build
+sudo docker logs stafferfi-all
+sudo docker logs stafferfi-postgres
 ```
 
-API:
+### Inspect processes inside the all-in-one container
 
 ```bash
-cd apps/api
-pnpm dev   # or pnpm start after build
+sudo docker exec -it stafferfi-all bash
+
+# Inside the container:
+supervisorctl -c /etc/supervisord.conf status
+supervisorctl -c /etc/supervisord.conf tail lake_pipeline stdout
+supervisorctl -c /etc/supervisord.conf tail api stdout
+supervisorctl -c /etc/supervisord.conf tail web stdout
 ```
 
-Lake:
+### Reset the stack (Compose)
 
 ```bash
-cd apps/lake
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-gunicorn app:app --bind 0.0.0.0:8000
+sudo docker compose down -v
+sudo docker compose up --build
 ```
 
 ---
-
-## Docker image details
-
-The `Dockerfile` uses a **multi-stage build**:
-
-1. **builder** (Node 20, pnpm)
-   - Installs JS dependencies via `pnpm install --frozen-lockfile`.
-   - Builds:
-     - Next.js web app (`pnpm build:web`) into `apps/web/.next/standalone`.
-     - API (`pnpm build:api`) into `apps/api/dist`.
-   - Creates a self-contained API bundle in `/tmp/api` containing:
-     - `package.json`
-     - `node_modules` (installed with `npm install --only=production --legacy-peer-deps`)
-     - built `dist/`.
-
-2. **lake-deps** (Python 3.10)
-   - Creates a virtualenv at `/opt/venv`.
-   - Installs `apps/lake` dependencies from `apps/lake/requirements.txt`.
-
-3. **runner** (Python 3.10)
-   - Installs Node.js runtime.
-   - Copies:
-     - Next.js standalone build and static assets.
-     - Self-contained API bundle from `/tmp/api` → `/app/apps/api`.
-     - Python venv and `apps/lake`.
-   - Installs `supervisor` and uses `supervisord` as the container entrypoint.
-
-Environment variables in the runner stage:
-
-- `NODE_ENV=production`
-- `NEXT_TELEMETRY_DISABLED=1`
-- `PORT=3000` (web)
-- `HOSTNAME=0.0.0.0`
-- `API_PORT=4000` (API)
-
-Exposed ports:
-
-- `EXPOSE 3000 4000 8000`
-
----
-
-## Supervisord
-
-`supervisord.conf` defines three main programs:
-
-- `[program:web]` – Next.js standalone
-- `[program:api]` – Express API
-- `[program:lake]` – Python lake service
-
-There is also an optional `[program:init]` which is currently configured with:
-
-```ini
-[program:init]
-command=/app/init.sh
-autostart=false
-autorestart=false
-```
-
-It is disabled by default to avoid restart spam, but can be used for one-time startup messages or migrations if needed.
-
----
-
-## Docs and ADRs
-
-Architecture and design decisions are tracked in:
-
-- [`docs/ADRs.md`](docs/ADRs.md)
-
-See that file for the rationale behind the current Docker, process, and port layout.
