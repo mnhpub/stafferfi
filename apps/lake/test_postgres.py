@@ -5,10 +5,11 @@ Verifies that data in PostgreSQL matches DuckDB source
 and that all checksums are valid.
 """
 
-import os
 import duckdb
 import psycopg2
 from pathlib import Path
+
+from db_url import normalized_pg_url
 
 
 def test_record_counts():
@@ -18,10 +19,7 @@ def test_record_counts():
     duck_path = Path(__file__).parent / 'ecfr_analytics.duckdb'
     duck_conn = duckdb.connect(str(duck_path), read_only=True)
     
-    pg_url = os.getenv(
-        'DATABASE_URL',
-        'postgresql://stafferfi:stafferfi_dev@localhost:5432/ecfr_analytics'
-    )
+    pg_url = normalized_pg_url()
     pg_conn = psycopg2.connect(pg_url)
     pg_cursor = pg_conn.cursor()
     
@@ -50,10 +48,7 @@ def test_checksum_integrity():
     """Test that checksums are present and valid."""
     print("\n🧪 Testing Checksum Integrity...")
     
-    pg_url = os.getenv(
-        'DATABASE_URL',
-        'postgresql://stafferfi:stafferfi_dev@localhost:5432/ecfr_analytics'
-    )
+    pg_url = normalized_pg_url()
     pg_conn = psycopg2.connect(pg_url)
     pg_cursor = pg_conn.cursor()
     
@@ -89,10 +84,7 @@ def test_data_relationships():
     """Test that foreign key relationships are valid."""
     print("\n🧪 Testing Data Relationships...")
     
-    pg_url = os.getenv(
-        'DATABASE_URL',
-        'postgresql://stafferfi:stafferfi_dev@localhost:5432/ecfr_analytics'
-    )
+    pg_url = normalized_pg_url()
     pg_conn = psycopg2.connect(pg_url)
     pg_cursor = pg_conn.cursor()
     
@@ -129,10 +121,7 @@ def test_analytics_accuracy():
     """Test that analytics calculations are accurate."""
     print("\n🧪 Testing Analytics Accuracy...")
     
-    pg_url = os.getenv(
-        'DATABASE_URL',
-        'postgresql://stafferfi:stafferfi_dev@localhost:5432/ecfr_analytics'
-    )
+    pg_url = normalized_pg_url()
     pg_conn = psycopg2.connect(pg_url)
     pg_cursor = pg_conn.cursor()
     
@@ -187,10 +176,7 @@ def test_views():
     """Test that views return data correctly."""
     print("\n🧪 Testing Views...")
     
-    pg_url = os.getenv(
-        'DATABASE_URL',
-        'postgresql://stafferfi:stafferfi_dev@localhost:5432/ecfr_analytics'
-    )
+    pg_url = normalized_pg_url()
     pg_conn = psycopg2.connect(pg_url)
     pg_cursor = pg_conn.cursor()
     
