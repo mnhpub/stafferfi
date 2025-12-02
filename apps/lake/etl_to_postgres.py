@@ -28,14 +28,17 @@ def is_postgres_available() -> bool:
         return False
     
     # Try to connect to verify the database is reachable
+    conn = None
     try:
         conn = psycopg2.connect(database_url, connect_timeout=5)
-        conn.close()
         return True
-    except psycopg2.OperationalError as e:
+    except (psycopg2.OperationalError, psycopg2.DatabaseError) as e:
         print(f"⚠️  PostgreSQL not reachable: {e}")
         print("⚠️  Skipping PostgreSQL ETL - database may not be provisioned yet")
         return False
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 class DuckDBToPostgresETL:
