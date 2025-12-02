@@ -14,6 +14,30 @@ import psycopg2
 from psycopg2.extras import execute_batch
 
 
+def is_postgres_available() -> bool:
+    """
+    Check if PostgreSQL is configured and reachable.
+    
+    Returns True if DATABASE_URL is set and we can connect to PostgreSQL.
+    Returns False if DATABASE_URL is not set (skips ETL gracefully).
+    """
+    database_url = os.getenv('DATABASE_URL')
+    
+    if not database_url:
+        print("⚠️  DATABASE_URL not set - skipping PostgreSQL ETL")
+        return False
+    
+    # Try to connect to verify the database is reachable
+    try:
+        conn = psycopg2.connect(database_url, connect_timeout=5)
+        conn.close()
+        return True
+    except psycopg2.OperationalError as e:
+        print(f"⚠️  PostgreSQL not reachable: {e}")
+        print("⚠️  Skipping PostgreSQL ETL - database may not be provisioned yet")
+        return False
+
+
 class DuckDBToPostgresETL:
     """ETL pipeline from DuckDB analytics to PostgreSQL."""
     
@@ -421,6 +445,11 @@ def main():
     if not db_path.exists():
         print(f"❌ DuckDB database not found: {db_path}")
         print("Run ingestion.py first to create the database.")
+        return
+    
+    # Check if PostgreSQL is available before attempting ETL
+    if not is_postgres_available():
+        print("✅ ETL skipped - PostgreSQL not configured")
         return
     
     etl = DuckDBToPostgresETL(str(db_path))
