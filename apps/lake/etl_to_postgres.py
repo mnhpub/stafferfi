@@ -13,8 +13,6 @@ import duckdb
 import psycopg2
 from psycopg2.extras import execute_batch
 
-from db_url import normalized_pg_url
-
 
 class DuckDBToPostgresETL:
     """ETL pipeline from DuckDB analytics to PostgreSQL."""
@@ -32,7 +30,10 @@ class DuckDBToPostgresETL:
             postgres_url: PostgreSQL connection URL (or use DATABASE_URL env var)
         """
         self.duckdb_path = duckdb_path
-        self.postgres_url = postgres_url or normalized_pg_url()
+        self.postgres_url = postgres_url or os.getenv(
+            'DATABASE_URL',
+            'postgresql://stafferfi:stafferfi_dev@localhost:5432/ecfr_analytics'
+        )
         self.duck_conn = None
         self.pg_conn = None
         self.start_time = None

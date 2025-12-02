@@ -1,7 +1,6 @@
 import express, { type Request, type Response } from 'express';
 import cors from 'cors';
 import { Pool } from 'pg';
-import { getNormalizedDatabaseUrl } from './lib/dbUrl';
 
 const app = express();
 const port = Number(process.env.API_PORT ?? 4000);
@@ -12,7 +11,7 @@ app.use(express.json());
 
 // PostgreSQL connection pool
 const pool = new Pool({
-  connectionString: getNormalizedDatabaseUrl(),
+  connectionString: process.env.DATABASE_URL || 'postgresql://stafferfi:stafferfi_dev@localhost:5432/ecfr_analytics',
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 2000,
