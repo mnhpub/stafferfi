@@ -6,7 +6,6 @@ when running inside Fly.io machines.
 """
 
 import os
-import re
 from urllib.parse import urlparse, urlunparse
 
 
