@@ -1,0 +1,23 @@
+# .github/workflows/mainframe-ci.yml
+name: Mainframe CI
+
+on:
+  push:
+    paths:
+      - 'src/**'
+      - 'mainframe-connector/**'
+
+jobs:
+  build-and-submit:
+    runs-on: ubuntu-latest
+    services:
+      tk4:
+        image: tk4-emulator:latest
+        ports:
+          - 10443:10443
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build connector
+        run: docker build -t connector ./mainframe-connector
+      - name: Submit JCL
+        run: docker run --network=host connector
